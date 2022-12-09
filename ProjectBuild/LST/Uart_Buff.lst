@@ -1,0 +1,103 @@
+C51 COMPILER V9.60.0.0   UART_BUFF                                                         12/04/2022 22:22:14 PAGE 1   
+
+
+C51 COMPILER V9.60.0.0, COMPILATION OF MODULE UART_BUFF
+OBJECT MODULE PLACED IN .\Output\Uart_Buff.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE ..\Library\StdDriver\src\Uart_Buff.c LARGE OPTIMIZE(8,SPEED) BROWSE INCD
+                    -IR(..\Library\DeviceDriver;..\Library\StdDriver\inc) DEFINE(FOSC_160000) DEBUG OBJECTEXTEND PRINT(.\LST\Uart_Buff.lst) O
+                    -BJECT(.\Output\Uart_Buff.obj)
+
+line level    source
+
+   1          /******************** (C) COPYRIGHT 2021 H3ElTeam ********************
+   2          * File Name          : Uart_RingBuff.c
+   3          * Author             : DThree
+   4          * Date First Issued  : 22/09/2021
+   5          * Description        : 
+   6          *********************************************************************************/
+   7          
+   8          /**             Hardware Define         **/
+   9          #include "Function_Define.h"
+  10          
+  11          #include "Queue.h"
+  12          #include "Uart_Buff.h"
+  13          
+  14          static tsQueue  asUart_RxQueue;
+  15          
+  16          bit bUartRead(unsigned char *pu8Data)
+  17          {
+  18   1          return(bQueue_Read(&asUart_RxQueue, pu8Data));
+  19   1      }
+  20          
+  21          void UART_Init(unsigned long u32Baudrate, unsigned char *pu8RxBuffer, unsigned long u32RxBufferLen)
+  22          {
+  23   1              vQueue_Init(&asUart_RxQueue, pu8RxBuffer, u32RxBufferLen);
+  24   1      
+  25   1          P06_Quasi_Mode;
+  26   1              P07_Quasi_Mode;
+  27   1              SFRS = 0;
+  28   1              
+  29   1              SCON = 0x50;          //UART0 Mode1,REN=1,TI=1
+  30   1              set_SMOD;        //UART0 Double Rate Enable
+  31   1              T3CON &= 0xF8;        //T3PS2=0,T3PS1=0,T3PS0=0(Prescale=1)
+  32   1              set_BRCK;        //UART0 baud rate clock source = Timer3
+  33   1              RH3    = HIBYTE(65536 - (1000000/u32Baudrate) - 1);
+  34   1              RL3    = LOBYTE(65536 - (1000000/u32Baudrate) - 1);
+  35   1              set_TR3;         //Trigger Timer3
+  36   1              set_ES;
+  37   1      }
+  38          void UART_Send_Data(unsigned char c)
+  39          {
+  40   1          _push_(SFRS);
+  41   1          SFRS = 0;
+  42   1              
+  43   1          SBUF = c;
+  44   1              while(!TI);
+  45   1              TI=0;
+  46   1          _pop_(SFRS);
+  47   1      }
+  48          
+  49          void SerialPort0_ISR(void) interrupt 4
+  50          {
+  51   1              _push_(SFRS);
+  52   1              if (RI == 1)
+  53   1              {
+C51 COMPILER V9.60.0.0   UART_BUFF                                                         12/04/2022 22:22:14 PAGE 2   
+
+  54   2                      bQueue_Write(&asUart_RxQueue, (unsigned char)SBUF);
+  55   2                      clr_RI;                 // Clear RI (Receive Interrupt).
+  56   2              }
+  57   1              _pop_(SFRS);
+  58   1      }
+  59          
+  60          #ifdef PRINTF_TO_UART0
+  61          char putchar(char c)
+  62          {
+  63   1              SBUF = c;
+  64   1              while (!TI);
+  65   1              TI = 0;
+  66   1              return (c);
+  67   1      }
+  68          #else
+              char putchar(char c)
+              {
+                      SBUF_1 = c;      /* output character */
+                      while (!TI_1);  /* wait until transmitter ready */
+                      TI_1 = 0;
+                      return (c);
+              }
+              #endif          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    319    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =     15      14
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

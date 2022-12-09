@@ -1,0 +1,269 @@
+C51 COMPILER V9.60.0.0   TM1629A_MRLG                                                      12/04/2022 22:22:14 PAGE 1   
+
+
+C51 COMPILER V9.60.0.0, COMPILATION OF MODULE TM1629A_MRLG
+OBJECT MODULE PLACED IN .\Output\TM1629A_MRLG.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE ..\Library\StdDriver\src\TM1629A_MRLG.c LARGE OPTIMIZE(8,SPEED) BROWSE I
+                    -NCDIR(..\Library\DeviceDriver;..\Library\StdDriver\inc) DEFINE(FOSC_160000) DEBUG OBJECTEXTEND PRINT(.\LST\TM1629A_MRLG.
+                    -lst) OBJECT(.\Output\TM1629A_MRLG.obj)
+
+line level    source
+
+   1          #include "TM1629A_MRLG.h"
+   2          
+   3          #include "Function_define.h"
+   4          
+   5          /*****************************************************************************
+   6          * Marco typedefs
+   7          *****************************************************************************/
+   8          #define stb P10 
+   9          #define clk P00 
+  10          #define dio P01 
+  11                                  
+  12          #define stb_output P10_PushPull_Mode
+  13          #define clk_output P00_PushPull_Mode
+  14          #define dio_output P01_PushPull_Mode
+  15          
+  16          #define PWM1 0x80
+  17          #define PWM2 0x81
+  18          #define PWM3 0x82
+  19          #define PWM4 0x83
+  20          #define PWM5 0x84
+  21          #define PWM6 0x85
+  22          #define PWM7 0x86
+  23          #define PWM8 0x87
+  24          #define Dis_ON  0x88
+  25          #define Dis_OFF 0x80
+  26          
+  27          /*****************************************************************************
+  28          * Constant and static variable
+  29          *****************************************************************************/
+  30          //const unsigned char code Code7Seg[] = {0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F, 0x5F,
+             - 0x7C, 0x39, 0x5E, 0x79, 0x71, 0x00, 0x40};// 0-F, off, sign(17)
+  31          
+  32          const unsigned char code Code7Seg[] = {0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F, 0xBF, 0
+             -x86, 0xDB, 0xCF, 0xE6, 0xED, 0xFD, 0x87, 0xFF, 0xEF, 0x40, 0x00};// 0-F(0 - 19), sign(20), off(21)
+  33          
+  34          //const unsigned char code Code7SegDOT[] = {0xBF, 0x86, 0xDB, 0xCF, 0xE6, 0xED, 0xFD, 0x87, 0xFF, 0xEF, 0x
+             -DF, 0xFC, 0xB9, 0xDE, 0xF9, 0xF1, 0x00, 0xC0};// 0-F, off, sign(17)
+  35          
+  36          const unsigned char code seg_addr[8]={0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07};//no bit of digital segment
+             -s
+  37          //                       SG0  SG1  SG2  SG3  SG4  SG5  SG6  SG7  DVD  VCD  MP3  PLY  PAU  PBC  RET  DTS  D
+             -DD  CL1  CL2   //name   -|
+  38          
+  39          static unsigned char buffer[16] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0
+             -x00,0x00};
+  40          
+  41          /*****************************************************************************
+  42          * Static functions prototype
+  43          *****************************************************************************/
+  44          static void update();
+  45          static void setSeg(unsigned char addr, unsigned char num);
+  46          static void send(unsigned char data1);  
+  47          static void sendData(unsigned char addr, unsigned char data1);
+C51 COMPILER V9.60.0.0   TM1629A_MRLG                                                      12/04/2022 22:22:14 PAGE 2   
+
+  48          static void sendCommand(unsigned char data1);
+  49          static void clear();
+  50          static void setPWM(unsigned char num);
+  51          /*****************************************************************************
+  52          * Public functions
+  53          *****************************************************************************/
+  54          void TM1629_Begin(void)
+  55          {
+  56   1          stb_output;
+  57   1          clk_output;
+  58   1          dio_output;
+  59   1      
+  60   1          stb = 1;
+  61   1          clk = 1;
+  62   1          dio = 1;
+  63   1      
+  64   1          sendCommand(0x40); // Write data to display register
+  65   1          sendCommand(Dis_OFF); // Display is off
+  66   1      
+  67   1          setPWM(PWM8);
+  68   1      
+  69   1          //  sendCommand(Dis_ON); // Display is on
+  70   1      
+  71   1          stb = 0;
+  72   1          send(0xC0);
+  73   1          clear();
+  74   1          stb = 1;
+  75   1      }
+  76          
+  77          void TM1629_CLEAR_ALL(void)
+  78          {
+  79   1          stb = 1;
+  80   1          clk = 1;
+  81   1          dio = 1;
+  82   1      
+  83   1          sendCommand(0x40); // Write data to display register
+  84   1      
+  85   1          stb = 0;
+  86   1          send(0xC0);
+  87   1          clear();
+  88   1          stb = 1;
+  89   1      }
+  90          
+  91          void setNshowAllSeg(unsigned char buffernum[])
+  92          {
+  93   1          unsigned char i=0;
+  94   1          for (i = 0; i<16; i++){
+  95   2              setSeg(i, buffernum[i]);
+  96   2          }
+  97   1          update();
+  98   1      }
+  99          
+ 100          void blinkSegwithLine(unsigned char line)
+ 101          {
+ 102   1          switch(line)
+ 103   1          {
+ 104   2              case 1:
+ 105   2              {
+ 106   3                  setSeg(2, 21);
+ 107   3                  break;
+ 108   3              }
+ 109   2              case 2:
+C51 COMPILER V9.60.0.0   TM1629A_MRLG                                                      12/04/2022 22:22:14 PAGE 3   
+
+ 110   2              {
+ 111   3                  setSeg(4, 21);
+ 112   3                  setSeg(5, 21);
+ 113   3                  setSeg(6, 21);
+ 114   3                  break;
+ 115   3              }
+ 116   2              case 3:
+ 117   2              {
+ 118   3                  setSeg(7, 21);
+ 119   3                  setSeg(8, 21);
+ 120   3                  setSeg(9, 21);
+ 121   3                  setSeg(10, 21);
+ 122   3                  break;
+ 123   3              }
+ 124   2              case 4:
+ 125   2              {
+ 126   3                  setSeg(12, 21);
+ 127   3                  setSeg(13, 21);
+ 128   3                  break;
+ 129   3              }
+ 130   2              case 5:
+ 131   2              {
+ 132   3                  setSeg(14, 21);
+ 133   3                  setSeg(15, 21);
+ 134   3                  break;
+ 135   3              }
+ 136   2          }
+ 137   1              update();
+ 138   1      }
+ 139          
+ 140          /*****************************************************************************
+ 141          * Static functions
+ 142          *****************************************************************************/
+ 143          static void setPWM(unsigned char PWM)
+ 144          {
+ 145   1          sendCommand(0x40); // Write data to display register
+ 146   1          sendCommand(PWM | Dis_ON);
+ 147   1      }
+ 148          
+ 149          static void clear()
+ 150          {
+ 151   1              unsigned char i=0;
+ 152   1              for (i=0; i<16; i++){
+ 153   2                      buffer[i]=0x00;
+ 154   2              }
+ 155   1              update();
+ 156   1      }
+ 157          
+ 158          static void setSeg(unsigned char addr, unsigned char num)
+ 159          {
+ 160   1              unsigned char i=0;
+ 161   1              if(addr < 8){
+ 162   2                      for(i=0; i<8; i++){
+ 163   3                              bitWrite(buffer[i*2], seg_addr[addr], bitRead(Code7Seg[num],i));
+ 164   3                      }
+ 165   2              }
+ 166   1          else if((addr == 8) && (num != 21)){
+ 167   2              for(i=0; i<8; i++){
+ 168   3                              bitWrite(buffer[i*2 + 1], seg_addr[addr - 8], bitRead(Code7Seg[num]|0x80,i));
+ 169   3                      }
+ 170   2          }
+ 171   1              else if(addr < 16){
+C51 COMPILER V9.60.0.0   TM1629A_MRLG                                                      12/04/2022 22:22:14 PAGE 4   
+
+ 172   2                      for(i=0; i<8; i++){
+ 173   3                              bitWrite(buffer[i*2 + 1], seg_addr[addr - 8], bitRead(Code7Seg[num],i));
+ 174   3                      }
+ 175   2              }
+ 176   1      }       
+ 177          
+ 178          static void update()
+ 179          {
+ 180   1          unsigned char i=0;
+ 181   1          sendCommand(0x44);  
+ 182   1      
+ 183   1          for (i=0; i<16; i++)
+ 184   1          {
+ 185   2              sendData(i, buffer[i]);
+ 186   2          }
+ 187   1      }
+ 188          
+ 189          /*********** mid level  **********/
+ 190          static void sendData(unsigned char addr, unsigned char data1)
+ 191          {
+ 192   1          stb =0;
+ 193   1          send(0xC0 | addr);
+ 194   1          send(data1);
+ 195   1          stb =1;
+ 196   1      }
+ 197          
+ 198          static void sendCommand(unsigned char data1)
+ 199          {
+ 200   1        stb =0;
+ 201   1        send(data1);
+ 202   1        stb =1;
+ 203   1      }
+ 204          
+ 205          /************ low level **********/
+ 206          static void send(unsigned char data1)
+ 207          {
+ 208   1          unsigned char i; 
+ 209   1          nop;
+ 210   1          nop;        
+ 211   1      
+ 212   1          for (i = 0; i < 8; i++) {
+ 213   2              clk =0;
+ 214   2              nop;
+ 215   2              nop;
+ 216   2              if((data1&0x01)!=0)
+ 217   2              {
+ 218   3                  dio=1;
+ 219   3              }
+ 220   2              else
+ 221   2              {
+ 222   3                  dio=0;
+ 223   3              }
+ 224   2              nop;
+ 225   2              nop;
+ 226   2              clk =1;
+ 227   2              nop;
+ 228   2              data1 >>= 1;
+ 229   2          }
+ 230   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+C51 COMPILER V9.60.0.0   TM1629A_MRLG                                                      12/04/2022 22:22:14 PAGE 5   
+
+   CODE SIZE        =    905    ----
+   CONSTANT SIZE    =     30    ----
+   XDATA SIZE       =     16      10
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

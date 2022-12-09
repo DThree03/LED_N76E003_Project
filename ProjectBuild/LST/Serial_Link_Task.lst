@@ -1,0 +1,191 @@
+C51 COMPILER V9.60.0.0   SERIAL_LINK_TASK                                                  12/04/2022 22:22:14 PAGE 1   
+
+
+C51 COMPILER V9.60.0.0, COMPILATION OF MODULE SERIAL_LINK_TASK
+OBJECT MODULE PLACED IN .\Output\Serial_Link_Task.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE Code\Serial_Link_Task.c LARGE OPTIMIZE(8,SPEED) BROWSE INCDIR(..\Library
+                    -\DeviceDriver;..\Library\StdDriver\inc) DEFINE(FOSC_160000) DEBUG OBJECTEXTEND PRINT(.\LST\Serial_Link_Task.lst) OBJECT(
+                    -.\Output\Serial_Link_Task.obj)
+
+line level    source
+
+   1          /******************** (C) COPYRIGHT 2021 H3ElTeam ********************
+   2          * File Name          : Serial_Linkl_Task.c
+   3          * Author             : DThree
+   4          * Date First Issued  : 21/09/2021
+   5          * Description        : This file run user Seriak Task
+   6          *********************************************************************************/
+   7          
+   8          /****************************************************************************/
+   9          /***        Include files                                                 ***/
+  10          /****************************************************************************/
+  11          #include "Serial_Link_Task.h"
+  12          #include "Uart_Buff.h"
+  13          
+  14          /* Private macro -------------------------------------------------------------*/
+  15          #define UART_BUFFER_LEN         200
+  16          #define BAUD_RATE                       9600
+  17          #define END_CHAR            0x0A
+  18          
+  19          /* Private typedef -----------------------------------------------------------*/
+  20          typedef enum{
+  21              E_WAIT_A_CHR,
+  22              E_WAIT_D_CHR,
+  23              E_WAIT_D1_CHR,
+  24              E_WAIT_R_CHR,
+  25              E_WAIT_ADDR,
+  26              E_WAIT_TYPE,
+  27              E_WAIT_DATA
+  28          }e_rx_state_t;
+  29          
+  30          /****************************************************************************/
+  31          /***        Local Variables                                               ***/
+  32          /****************************************************************************/
+  33          //xdata volatile unsigned char uartRxBuff[UART_BUFFER_LEN];
+  34          volatile unsigned char uartRxBuff[UART_BUFFER_LEN];
+  35          
+  36          static e_rx_state_t  Rx_State = E_WAIT_A_CHR;
+  37          static unsigned char  u8DataType;
+  38          static unsigned char  u8DataAddr;
+  39          
+  40          static unsigned char  u8DataIn[16];
+  41          /****************************************************************************/
+  42          /***        Local Function Prototypes                                     ***/
+  43          /****************************************************************************/
+  44          static unsigned char APP_vProcessRxChar(unsigned char u8Char);
+  45          
+  46          
+  47          /****************************************************************************/
+  48          /***        Exported Functions                                            ***/
+  49          /****************************************************************************/
+  50          void Serial_Link_Init(void)
+  51          {
+  52   1              UART_Init(BAUD_RATE, uartRxBuff, UART_BUFFER_LEN); 
+  53   1      }
+C51 COMPILER V9.60.0.0   SERIAL_LINK_TASK                                                  12/04/2022 22:22:14 PAGE 2   
+
+  54          
+  55          /*
+  56          void Serial_Tx_Send(unsigned char u8Type, unsigned int u16Length, unsigned char *pu8Data)
+  57          {
+  58                  
+  59                  
+  60          } */
+  61          
+  62          bit Serial_Link_Task(void)
+  63          {
+  64   1              unsigned char u8RxByte;
+  65   1              while(bUartRead(&u8RxByte))
+  66   1              {
+  67   2                      if(APP_vProcessRxChar(u8RxByte) != 0xFF)
+  68   2                      {                       
+  69   3                              
+  70   3                              return 1;
+  71   3                      }
+  72   2              }
+  73   1              return 0;
+  74   1      }
+  75          
+  76          unsigned char Serial_Get_DataType(void)
+  77          {
+  78   1              return u8DataType;
+  79   1      }
+  80          
+  81          unsigned char Serial_Get_DataAddr(void)
+  82          {
+  83   1              return u8DataAddr;
+  84   1      }
+  85          
+  86          unsigned char* Serial_Get_DataIn(void)
+  87          {
+  88   1              return u8DataIn;
+  89   1      }
+  90          /****************************************************************************/
+  91          /***        Local Function                                                            ***/
+  92          /****************************************************************************/
+  93          static unsigned char APP_vProcessRxChar(unsigned char u8Char)
+  94          {
+  95   1          static unsigned int RxDataCnt = 0;
+  96   1              switch(Rx_State)
+  97   1          {
+  98   2              case E_WAIT_A_CHR:
+  99   2              {
+ 100   3                   if(u8Char == 'A')
+ 101   3                      Rx_State = E_WAIT_D_CHR;
+ 102   3                   break;
+ 103   3              }
+ 104   2              case E_WAIT_D_CHR:
+ 105   2              {
+ 106   3                   if(u8Char == 'D')
+ 107   3                      Rx_State = E_WAIT_D1_CHR;
+ 108   3                   else
+ 109   3                      Rx_State = E_WAIT_A_CHR; 
+ 110   3                   break;
+ 111   3              }
+ 112   2              case E_WAIT_D1_CHR:
+ 113   2              {
+ 114   3                   if(u8Char == 'D')
+ 115   3                      Rx_State = E_WAIT_R_CHR;
+C51 COMPILER V9.60.0.0   SERIAL_LINK_TASK                                                  12/04/2022 22:22:14 PAGE 3   
+
+ 116   3                   else
+ 117   3                      Rx_State = E_WAIT_A_CHR; 
+ 118   3                   break;
+ 119   3              }
+ 120   2              case E_WAIT_R_CHR:
+ 121   2              {
+ 122   3                   if(u8Char == 'R')
+ 123   3                      Rx_State = E_WAIT_ADDR;
+ 124   3                   else
+ 125   3                      Rx_State = E_WAIT_A_CHR; 
+ 126   3                   break;
+ 127   3              }
+ 128   2              case E_WAIT_ADDR:
+ 129   2              {
+ 130   3                   if((u8Char > 47) && (u8Char < 53)){
+ 131   4                      u8DataAddr = u8Char - 48;
+ 132   4                      Rx_State = E_WAIT_TYPE;
+ 133   4                   }else
+ 134   3                      Rx_State = E_WAIT_A_CHR; 
+ 135   3                   break;
+ 136   3              }
+ 137   2              case E_WAIT_TYPE:
+ 138   2              {
+ 139   3                   if((u8Char > 47) && (u8Char < 58)){
+ 140   4                      u8DataType = u8Char - 48;
+ 141   4                      RxDataCnt = 0; 
+ 142   4                      Rx_State = E_WAIT_DATA;
+ 143   4                   }else
+ 144   3                      Rx_State = E_WAIT_A_CHR; 
+ 145   3                   break;
+ 146   3              }
+ 147   2              case E_WAIT_DATA:
+ 148   2              {
+ 149   3                  if(u8Char ==  END_CHAR){
+ 150   4                      Rx_State = E_WAIT_A_CHR;
+ 151   4                      return 1;
+ 152   4                  }
+ 153   3                  else if((u8Char > 47) && (u8Char < 71)){
+ 154   4                      *(u8DataIn+RxDataCnt) = u8Char - 48;
+ 155   4                      RxDataCnt++;
+ 156   4                  }else
+ 157   3                      Rx_State = E_WAIT_A_CHR; 
+ 158   3                  break;
+ 159   3              }
+ 160   2          }
+ 161   1              return 0xFF;
+ 162   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    337    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =    221       1
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

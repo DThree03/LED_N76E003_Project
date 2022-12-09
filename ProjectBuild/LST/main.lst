@@ -1,0 +1,321 @@
+C51 COMPILER V9.60.0.0   MAIN                                                              12/04/2022 22:22:14 PAGE 1   
+
+
+C51 COMPILER V9.60.0.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Output\main.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE Code\main.c LARGE OPTIMIZE(8,SPEED) BROWSE INCDIR(..\Library\DeviceDrive
+                    -r;..\Library\StdDriver\inc) DEFINE(FOSC_160000) DEBUG OBJECTEXTEND PRINT(.\LST\main.lst) OBJECT(.\Output\main.obj)
+
+line level    source
+
+   1          #include "main.h"
+   2          #include "Serial_Link_Task.h"
+   3          /*****************************************************************************
+   4          * Static variable
+   5          *****************************************************************************/
+   6          static int    BOARD_ADDR;
+   7          
+   8          static unsigned char    blink_line = 1;
+   9          static unsigned char    blink_flag = 0;
+  10          
+  11          static unsigned char    read_type;
+  12          static unsigned char    read_addr;
+  13          unsigned char*          read_buff = NULL;
+  14          
+  15          static unsigned char    DATA_LED_7[16] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5};
+  16          static unsigned char    DATA_LED_XL[4] = {0, 0, 0, 0};
+  17          /*****************************************************************************
+  18          * Main Loop
+  19          *****************************************************************************/
+  20          void main(void)
+  21          {
+  22   1              SystemInit();
+  23   1          Serial_Link_Init();
+  24   1          delay_ms(2000);
+  25   1          
+  26   1          BOARD_ADDR = get_board_addr();
+  27   1          //printf("Read addr %d\n", BOARD_ADDR);
+  28   1          if(BOARD_ADDR == 0)
+  29   1          {
+  30   2              MainState = STATE_ERR;
+  31   2              goto error;
+  32   2          }
+  33   1              
+  34   1          TM1629_Begin();
+  35   1          
+  36   1          //setNshowAllSeg(DATA_LED_7);
+  37   1              while (1)
+  38   1              {       
+  39   2                      switch (MainState)
+  40   2                      {
+  41   3                              case STATE_0:
+  42   3      
+  43   3                              while(1)
+  44   3                              {
+  45   4                      Task_Serial_Display();
+  46   4                                      if(MainState!=STATE_0)
+  47   4                                      {
+  48   5                                              break;
+  49   5                                      }
+  50   4                              }
+  51   3                              break;
+  52   3                              
+  53   3                              case STATE_1:
+  54   3      
+C51 COMPILER V9.60.0.0   MAIN                                                              12/04/2022 22:22:14 PAGE 2   
+
+  55   3                              while(1)
+  56   3                              {
+  57   4                      Task_Serial_Display();
+  58   4                                      Task1();
+  59   4                                      if(MainState!=STATE_1)
+  60   4                                      {
+  61   5                                              break;
+  62   5                                      }
+  63   4                              }
+  64   3                              break;
+  65   3                              case STATE_ERR:
+  66   3                      while(1)
+  67   3                      {
+  68   4      error:              Task5();                    
+  69   4                          if(MainState!=STATE_ERR)
+  70   4                              break;
+  71   4                      }       
+  72   3                      break;
+  73   3                      }
+  74   2              }
+  75   1      }
+  76          
+  77          /*****************************************************************************
+  78          * ISR 
+  79          *****************************************************************************/
+  80          void Timer0_ISR (void) interrupt 1                                      //interrupt address is 0x000B
+  81          {
+  82   1              /* Reload counter */
+  83   1              TH0 = (unsigned int)TIMER_DIV12_VALUE_1ms/256;
+  84   1              TL0 = (unsigned int)TIMER_DIV12_VALUE_1ms%256; 
+  85   1              /* Increase system click and set flag task enable */
+  86   1              sys_millis++;
+  87   1              if(bFlagDelay==1)
+  88   1              {
+  89   2                      uCountDelay++;
+  90   2              }
+  91   1              else
+  92   1              {
+  93   2                      uCountDelay=0;
+  94   2              }
+  95   1              if(sys_millis>=10000)                   sys_millis=0;
+  96   1              if(sys_millis%TASK1==0)                 StrTask.Task1=1;
+  97   1              if(sys_millis%TASK2==0)                 StrTask.Task2=1;
+  98   1              if(sys_millis%TASK3==0)                 StrTask.Task3=1;
+  99   1              if(sys_millis%TASK4==0)                 StrTask.Task4=1;
+ 100   1              if(sys_millis%TASK5==0)                 StrTask.Task5=1;
+ 101   1      }
+ 102          /*
+ 103          void Timer1_ISR (void) interrupt3                                       //interruptaddress is 0x001B
+ 104          {       
+ 105                    TH1 = (unsignedint)TIMER_DIV12_VALUE_1ms/256;
+ 106                    TL1 = (unsignedint)TIMER_DIV12_VALUE_1ms%256;
+ 107                  //Custom Code
+ 108                  
+ 109          }
+ 110          
+ 111          void Timer3_ISR(void) interrupt 16 
+ 112          {
+ 113              clr_TF3; 
+ 114                          
+ 115          }
+ 116          */
+C51 COMPILER V9.60.0.0   MAIN                                                              12/04/2022 22:22:14 PAGE 3   
+
+ 117          
+ 118          void WakeUp_Timer_ISR (void)   interrupt 17     //ISR for self wake-up timer
+ 119          {
+ 120   1                              //set_SWRST;
+ 121   1                              clr_WKTF;//clear interrupt flag         
+ 122   1      }
+ 123          /////////////////////////////////////////////////////////////
+ 124          static void Task_Serial_Display(void)
+ 125          { 
+ 126   1          int i;
+ 127   1                
+ 128   1          if(Serial_Link_Task() == 0)
+ 129   1              return;
+ 130   1          read_addr = Serial_Get_DataAddr();
+ 131   1          if((read_addr != BOARD_ADDR) && (read_addr != 0))
+ 132   1              return;
+ 133   1              
+ 134   1          read_type = Serial_Get_DataType();
+ 135   1          switch(read_type)
+ 136   1          {
+ 137   2              case DATA_LED7_TYPE:
+ 138   2              {
+ 139   3                  read_buff = Serial_Get_DataIn();
+ 140   3                  for(i=0;i<16;i++){
+ 141   4                      DATA_LED_7[i] = *(read_buff+i);
+ 142   4                  }
+ 143   3                  break;
+ 144   3              }
+ 145   2              case UPDATE_LED7_TYPE:
+ 146   2              {
+ 147   3                  setNshowAllSeg(DATA_LED_7);
+ 148   3                  break;
+ 149   3              }
+ 150   2              case UPDATE_BLINK_STATE:
+ 151   2              {
+ 152   3                  read_buff = Serial_Get_DataIn();
+ 153   3                  if(*read_buff == 1){
+ 154   4                      blink_line = *(read_buff+1);
+ 155   4                      MainState = STATE_1;
+ 156   4                  }
+ 157   3                  else{
+ 158   4                      setNshowAllSeg(DATA_LED_7);
+ 159   4                      MainState = STATE_0;
+ 160   4                  }
+ 161   3                  break;
+ 162   3              }
+ 163   2              case DATA_LEDXL_TYPE:
+ 164   2              {
+ 165   3                  read_buff = Serial_Get_DataIn();
+ 166   3                  LED_WRITE(LED1, (*read_buff&0x01)); 
+ 167   3                  LED_WRITE(LED2, (*read_buff&0x02)>>1);
+ 168   3                  LED_WRITE(LED3, (*read_buff&0x04)>>2);
+ 169   3                  LED_WRITE(LED4, (*read_buff&0x08)>>3);
+ 170   3                  break;
+ 171   3              }
+ 172   2          }       
+ 173   1          
+ 174   1      }
+ 175          
+ 176          static void Task1(void)
+ 177          { 
+ 178   1              if(StrTask.Task1==1)
+C51 COMPILER V9.60.0.0   MAIN                                                              12/04/2022 22:22:14 PAGE 4   
+
+ 179   1              {       
+ 180   2              StrTask.Task1=0;
+ 181   2              
+ 182   2              if(blink_flag){
+ 183   3                  setNshowAllSeg(DATA_LED_7);
+ 184   3                  blink_flag = 0;
+ 185   3                  return;
+ 186   3              }
+ 187   2              
+ 188   2              blinkSegwithLine(blink_line);
+ 189   2              blink_flag = 1;
+ 190   2          }
+ 191   1      }
+ 192          
+ 193          static void Task2(void)
+ 194          {
+ 195   1              if(StrTask.Task2==1)
+ 196   1              {
+ 197   2              StrTask.Task2=0;
+ 198   2              
+ 199   2              }
+ 200   1      }
+ 201          
+ 202          static void Task3(void)
+ 203          {
+ 204   1              if(StrTask.Task3==1)
+ 205   1              {               
+ 206   2      
+ 207   2                      
+ 208   2                      StrTask.Task3=0;
+ 209   2              }
+ 210   1      }
+ 211          
+ 212          
+ 213          static void     Task4(void)
+ 214          {
+ 215   1              if(StrTask.Task4==1)
+ 216   1              {
+ 217   2                      //printf("Vo Tan Dat");
+ 218   2                      //putchar(0x0D);
+ 219   2                      StrTask.Task4=0;
+ 220   2              }
+ 221   1      }
+ 222          static void     Task5(void)
+ 223          {
+ 224   1              if(StrTask.Task5==1)
+ 225   1              {
+ 226   2              LED_WRITE(LED1, ON); LED_WRITE(LED2, ON); LED_WRITE(LED3, ON); LED_WRITE(LED4, ON);
+ 227   2              delay_ms(500);
+ 228   2              LED_WRITE(LED1, OFF); LED_WRITE(LED2, OFF); LED_WRITE(LED3, OFF); LED_WRITE(LED4, OFF);
+ 229   2              delay_ms(500);
+ 230   2              
+ 231   2              StrTask.Task5 = 0;
+ 232   2              if(BOARD_ADDR == 0){
+ 233   3                  BOARD_ADDR = get_board_addr();
+ 234   3                  if(BOARD_ADDR == 0)
+ 235   3                      return;
+ 236   3              }
+ 237   2              }
+ 238   1      }
+ 239          
+ 240          static int get_board_addr(void)
+C51 COMPILER V9.60.0.0   MAIN                                                              12/04/2022 22:22:14 PAGE 5   
+
+ 241          {
+ 242   1          int address = 0;
+ 243   1      
+ 244   1              bitWrite(address, 0, ADD1_VAL);
+ 245   1              bitWrite(address, 1, ADD2_VAL);
+ 246   1              bitWrite(address, 2, ADD3_VAL);
+ 247   1              bitWrite(address, 3, ADD4_VAL);
+ 248   1              
+ 249   1              if(address == 14){// only ADD1 connect to GND -> address = 14
+ 250   2                      address = 1;
+ 251   2              }
+ 252   1              else if(address == 13){// only ADD2 connect to GND -> address = 13
+ 253   2                      address = 2;
+ 254   2              }
+ 255   1              else if(address == 11){// only ADD3 connect to GND -> address = 11
+ 256   2                      address = 3;
+ 257   2              }
+ 258   1              else if(address == 7){// only ADD4 connect to GND -> address = 7
+ 259   2                      address = 4;
+ 260   2              }
+ 261   1              else{
+ 262   2                      address = 0;// Jump Failed or Not Jump Yet
+ 263   2              }               
+ 264   1      //      printf("\nAddress = %d", address);
+ 265   1              
+ 266   1              return address;
+ 267   1              
+ 268   1      }
+ 269          /////////////////////////////////////////////////////////////////////////////////////
+ 270          #ifdef USE_FULL_ASSERT
+                      
+                      /**
+                              * @brief        Reports the name of the source file and the source line number
+                              *        where the assert_param error has occurred.
+                              * @param file: pointer to the source file name
+                              * @param line: assert_param error line source number
+                              * @retval : None
+                      */
+                      void assert_failed(u8* file, u32 line)
+                      { 
+                              /* User can add his own implementation to report the file name and line number,
+                              ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+                              
+                              /* Infinite loop */
+                              while (1)
+                              {
+                              }
+                      }
+              #endif
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    829    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =     35    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,10 @@
+".\Output\main.obj",
+".\Output\initsystem.obj",
+".\Output\Serial_Link_Task.obj",
+".\Output\TM1629A_MRLG.obj",
+".\Output\Queue.obj",
+".\Output\Uart_Buff.obj",
+".\Output\STARTUP.obj" 
+TO ".\Output\Project" 
+PRINT(".\LST\Project.m51") RAMSIZE(256) 
+DISABLEWARNING (16) 
