@@ -1,4 +1,4 @@
-C51 COMPILER V9.60.0.0   SERIAL_LINK_TASK                                                  12/04/2022 22:22:14 PAGE 1   
+C51 COMPILER V9.60.0.0   SERIAL_LINK_TASK                                                  12/24/2022 13:41:09 PAGE 1   
 
 
 C51 COMPILER V9.60.0.0, COMPILATION OF MODULE SERIAL_LINK_TASK
@@ -62,7 +62,7 @@ line level    source
   51          {
   52   1              UART_Init(BAUD_RATE, uartRxBuff, UART_BUFFER_LEN); 
   53   1      }
-C51 COMPILER V9.60.0.0   SERIAL_LINK_TASK                                                  12/04/2022 22:22:14 PAGE 2   
+C51 COMPILER V9.60.0.0   SERIAL_LINK_TASK                                                  12/24/2022 13:41:09 PAGE 2   
 
   54          
   55          /*
@@ -126,7 +126,7 @@ line level    source
  113   2              {
  114   3                   if(u8Char == 'D')
  115   3                      Rx_State = E_WAIT_R_CHR;
-C51 COMPILER V9.60.0.0   SERIAL_LINK_TASK                                                  12/04/2022 22:22:14 PAGE 3   
+C51 COMPILER V9.60.0.0   SERIAL_LINK_TASK                                                  12/24/2022 13:41:09 PAGE 3   
 
  116   3                   else
  117   3                      Rx_State = E_WAIT_A_CHR; 

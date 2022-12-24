@@ -1,4 +1,4 @@
-C51 COMPILER V9.60.0.0   UART_BUFF                                                         12/04/2022 22:22:14 PAGE 1   
+C51 COMPILER V9.60.0.0   UART_BUFF                                                         12/24/2022 13:41:10 PAGE 1   
 
 
 C51 COMPILER V9.60.0.0, COMPILATION OF MODULE UART_BUFF
@@ -62,7 +62,7 @@ line level    source
   51   1              _push_(SFRS);
   52   1              if (RI == 1)
   53   1              {
-C51 COMPILER V9.60.0.0   UART_BUFF                                                         12/04/2022 22:22:14 PAGE 2   
+C51 COMPILER V9.60.0.0   UART_BUFF                                                         12/24/2022 13:41:10 PAGE 2   
 
   54   2                      bQueue_Write(&asUart_RxQueue, (unsigned char)SBUF);
   55   2                      clr_RI;                 // Clear RI (Receive Interrupt).

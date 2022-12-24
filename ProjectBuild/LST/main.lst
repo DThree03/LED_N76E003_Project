@@ -1,4 +1,4 @@
-C51 COMPILER V9.60.0.0   MAIN                                                              12/04/2022 22:22:14 PAGE 1   
+C51 COMPILER V9.60.0.0   MAIN                                                              12/24/2022 13:41:09 PAGE 1   
 
 
 C51 COMPILER V9.60.0.0, COMPILATION OF MODULE MAIN
@@ -22,7 +22,7 @@ line level    source
   12          static unsigned char    read_addr;
   13          unsigned char*          read_buff = NULL;
   14          
-  15          static unsigned char    DATA_LED_7[16] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5};
+  15          static unsigned char    DATA_LED_7[16] = {21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21};
   16          static unsigned char    DATA_LED_XL[4] = {0, 0, 0, 0};
   17          /*****************************************************************************
   18          * Main Loop
@@ -62,7 +62,7 @@ line level    source
   52   3                              
   53   3                              case STATE_1:
   54   3      
-C51 COMPILER V9.60.0.0   MAIN                                                              12/04/2022 22:22:14 PAGE 2   
+C51 COMPILER V9.60.0.0   MAIN                                                              12/24/2022 13:41:09 PAGE 2   
 
   55   3                              while(1)
   56   3                              {
@@ -126,7 +126,7 @@ line level    source
  114                          
  115          }
  116          */
-C51 COMPILER V9.60.0.0   MAIN                                                              12/04/2022 22:22:14 PAGE 3   
+C51 COMPILER V9.60.0.0   MAIN                                                              12/24/2022 13:41:09 PAGE 3   
 
  117          
  118          void WakeUp_Timer_ISR (void)   interrupt 17     //ISR for self wake-up timer
@@ -190,7 +190,7 @@ line level    source
  176          static void Task1(void)
  177          { 
  178   1              if(StrTask.Task1==1)
-C51 COMPILER V9.60.0.0   MAIN                                                              12/04/2022 22:22:14 PAGE 4   
+C51 COMPILER V9.60.0.0   MAIN                                                              12/24/2022 13:41:09 PAGE 4   
 
  179   1              {       
  180   2              StrTask.Task1=0;
@@ -254,7 +254,7 @@ line level    source
  238   1      }
  239          
  240          static int get_board_addr(void)
-C51 COMPILER V9.60.0.0   MAIN                                                              12/04/2022 22:22:14 PAGE 5   
+C51 COMPILER V9.60.0.0   MAIN                                                              12/24/2022 13:41:09 PAGE 5   
 
  241          {
  242   1          int address = 0;
